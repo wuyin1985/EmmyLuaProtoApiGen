@@ -20,25 +20,6 @@ public class PbExportConfig
 
 public class PbUtils
 {
-    private static bool isCurEnum = false;
-    private static List<string> curClsName = new List<string>();
-
-    private static bool is_proto_ignore(string name, PbExportConfig config)
-    {
-        if (config.ignore_proto != null)
-        {
-            foreach (var ignore_proto in config.ignore_proto)
-            {
-                if (name.Contains(ignore_proto))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     private enum MessageType
     {
         Message,
@@ -81,16 +62,12 @@ public class PbUtils
         public List<string> pendingComments = new List<string>();
     }
 
-    public static void GenPbAPI(string protobufDir, string todir, string configPath)
+    public static void GenPbAPI(string protobufDir, string todir)
     {
-        var configJson = File.ReadAllText(configPath, Encoding.UTF8);
-        var config = PbExportConfig.LoadFromString(configJson);
         string[] paths = Directory.GetFiles(protobufDir, "*.proto");
 
         for (var i = 0; i < paths.Length; i++)
         {
-            if (is_proto_ignore(paths[i], config)) continue;
-
             //当前的proto文件
             var context = new Context();
             var reader = new SymbolReader(File.ReadAllText(paths[i]), new[] { '{', '}', '=', ';', '<', ',', '>' });
@@ -190,7 +167,7 @@ public class PbUtils
                                 context.working_member.type = get_lua_type(key_type);
                                 asset_next_symbol(iter, ",");
                                 var value_type = asset_next_symbol(iter);
-                                context.working_member.type = get_lua_type(value_type);
+                                context.working_member.mapValueType = get_lua_type(value_type);
                                 asset_next_symbol(iter, ">");
                             }
                             else
@@ -278,7 +255,7 @@ public class PbUtils
                     foreach (var member in messageInfo.members)
                     {
                         var typeStr = member.mapValueType != null
-                            ? $"table<{member.type},{member.mapValueType}"
+                            ? $"table<{member.type}, {member.mapValueType}>"
                             : member.type;
                         if (member.isArray)
                         {
@@ -350,21 +327,5 @@ public class PbUtils
         }
 
         return Regex.Replace(fieldType, @"pb_\w+\.", "");
-    }
-
-    private static bool is_line_ignore(string str, PbExportConfig config)
-    {
-        if (config.ignore_lines != null)
-        {
-            foreach (var line in config.ignore_lines)
-            {
-                if (str.Contains(line))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 }
